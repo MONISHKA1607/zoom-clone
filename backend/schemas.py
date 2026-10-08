@@ -68,6 +68,7 @@ class MeetingOut(BaseModel):
     status: str
     created_at: datetime
     invite_link: Optional[str] = None  # not a DB column; filled in by the route
+    host_name: Optional[str] = None  # filled in by the route from meeting.host.name
 
     @field_serializer("scheduled_start", "created_at")
     def serialize_dates(self, value):

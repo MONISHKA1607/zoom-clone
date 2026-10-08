@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-import { formatDate, formatTime, formatTimeRange } from "@/lib/format";
+import { formatDate, formatFullRange, formatShortDateTime } from "@/lib/format";
 import type { Meeting } from "@/lib/types";
 
 interface MeetingCardProps {
@@ -30,26 +30,21 @@ export default function MeetingCard({ meeting, variant }: MeetingCardProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zoom-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex gap-4">
-        <div className="w-32 shrink-0">
-          <p className="text-sm font-bold">{formatDate(when)}</p>
-          <p className="text-xs text-zoom-muted">
-            {variant === "upcoming"
-              ? formatTimeRange(when, meeting.duration_minutes)
-              : formatTime(when)}
-          </p>
-        </div>
-        <div className="min-w-0">
-          <p className="truncate font-bold">{meeting.title}</p>
-          <p className="text-xs text-zoom-muted">
-            Meeting ID: {meeting.meeting_code}
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 rounded-xl border border-zoom-border p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 text-sm leading-6">
+        <p className="truncate text-base font-bold">{meeting.title}</p>
+        <p>{formatDate(when)}</p>
+        <p>
+          {variant === "upcoming"
+            ? formatFullRange(when, meeting.duration_minutes)
+            : formatShortDateTime(when)}
+        </p>
+        <p className="text-zoom-muted">Meeting ID: {meeting.meeting_code}</p>
+        {meeting.host_name && <p>Host: {meeting.host_name}</p>}
       </div>
 
       {variant === "upcoming" && (
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={copyInviteLink}
             aria-label="Copy invite link"

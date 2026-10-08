@@ -1,4 +1,4 @@
-import { Calendar, Plus, Video } from "lucide-react";
+import { ChevronDown, Plus, VideoOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface ActionTileProps {
@@ -6,20 +6,24 @@ interface ActionTileProps {
   icon: ReactNode;
   color: string;
   onClick: () => void;
+  hasDropdown?: boolean;
 }
 
-function ActionTile({ label, icon, color, onClick }: ActionTileProps) {
+function ActionTile({ label, icon, color, onClick, hasDropdown }: ActionTileProps) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 focus:outline-none"
+      className="group flex flex-col items-center gap-3 focus:outline-none"
     >
       <span
-        className={`flex h-20 w-20 items-center justify-center rounded-2xl text-white transition group-hover:brightness-90 group-focus-visible:ring-2 group-focus-visible:ring-zoom-blue group-focus-visible:ring-offset-2 ${color}`}
+        className={`flex h-[70px] w-[70px] items-center justify-center rounded-[22px] text-white transition group-hover:brightness-90 group-focus-visible:ring-2 group-focus-visible:ring-zoom-blue group-focus-visible:ring-offset-2 ${color}`}
       >
         {icon}
       </span>
-      <span className="text-sm font-bold text-zoom-text">{label}</span>
+      <span className="flex items-center gap-1 text-base text-zoom-muted">
+        {label}
+        {hasDropdown && <ChevronDown size={16} />}
+      </span>
     </button>
   );
 }
@@ -36,23 +40,32 @@ export default function ActionButtons({
   onSchedule,
 }: ActionButtonsProps) {
   return (
-    <div className="grid grid-cols-3 gap-4 rounded-2xl border border-zoom-border bg-white p-6">
+    <div className="flex justify-center gap-10 sm:gap-14">
       <ActionTile
-        label="New Meeting"
-        icon={<Video size={32} />}
+        label="New meeting"
+        hasDropdown
         color="bg-zoom-orange"
+        icon={<VideoOff size={34} strokeWidth={2.5} />}
         onClick={onNewMeeting}
       />
       <ActionTile
         label="Join"
-        icon={<Plus size={32} />}
         color="bg-zoom-blue"
+        icon={
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-zoom-blue">
+            <Plus size={24} strokeWidth={3} />
+          </span>
+        }
         onClick={onJoin}
       />
       <ActionTile
         label="Schedule"
-        icon={<Calendar size={32} />}
         color="bg-zoom-blue"
+        icon={
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-sm font-black text-zoom-blue">
+            19
+          </span>
+        }
         onClick={onSchedule}
       />
     </div>

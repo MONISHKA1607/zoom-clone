@@ -10,6 +10,7 @@ export interface Meeting {
   status: "scheduled" | "active" | "ended";
   created_at: string;
   invite_link: string | null;
+  host_name: string | null;
 }
 
 export interface Participant {

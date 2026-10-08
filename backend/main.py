@@ -56,6 +56,7 @@ async def value_error_handler(request: Request, exc: ValueError):
 def to_meeting_out(meeting: models.Meeting) -> schemas.MeetingOut:
     out = schemas.MeetingOut.model_validate(meeting)
     out.invite_link = f"{FRONTEND_URL}/meeting/{meeting.meeting_code}"
+    out.host_name = meeting.host.name
     return out
 
 

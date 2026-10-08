@@ -20,18 +20,18 @@ export default function MeetingSection({
 }: MeetingSectionProps) {
   return (
     <section>
-      <h2 className="mb-3 text-lg font-black">{title}</h2>
+      <h2 className="mb-3 text-base font-bold">{title}</h2>
 
       {loading && (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-[74px] animate-pulse rounded-xl bg-white" />
+            <div key={i} className="h-[120px] animate-pulse rounded-xl bg-zoom-bg" />
           ))}
         </div>
       )}
 
       {!loading && error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p className="rounded-xl border border-dashed border-zoom-border p-6 text-center text-sm text-zoom-muted">
           {error}
         </p>
       )}

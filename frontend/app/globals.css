@@ -3,11 +3,13 @@
 @theme {
   --color-zoom-blue: #0b5cff;
   --color-zoom-blue-dark: #0845bf;
+  --color-zoom-blue-light: #e8f0ff;
   --color-zoom-orange: #ff742e;
-  --color-zoom-bg: #f4f6fa;
+  --color-zoom-purple: #8a4fd6;
+  --color-zoom-bg: #eef1f6;      /* page + sidebar + search bar */
   --color-zoom-text: #232333;
-  --color-zoom-muted: #747487;
-  --color-zoom-border: #e0e0e6;
+  --color-zoom-muted: #6e6e82;
+  --color-zoom-border: #dfe2ea;
 }
 
 @theme inline {
