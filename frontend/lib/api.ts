@@ -1,4 +1,4 @@
-import { JoinResponse, Meeting } from "./types";
+import { JoinResponse, Meeting, ScheduleInput } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -10,9 +10,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    // Our own errors send detail as a string; FastAPI's 422 sends an array.
-    const message =
-      typeof body?.detail === "string" ? body.detail : "Something went wrong";
+    let message = "Something went wrong";
+    if (typeof body?.detail === "string") {
+      message = body.detail; // our own errors (404, 410, 400)
+    } else if (Array.isArray(body?.detail) && body.detail[0]?.msg) {
+      // Pydantic validation errors (422): show the first one, minus its prefix
+      message = String(body.detail[0].msg).replace(/^Value error, /, "");
+    }
     throw new Error(message);
   }
   return res.json() as Promise<T>;
@@ -52,5 +56,12 @@ export function joinMeeting(
   return request<JoinResponse>(`/meetings/${code}/join`, {
     method: "POST",
     body: JSON.stringify({ display_name: displayName, user_id: userId }),
+  });
+}
+
+export function scheduleMeeting(input: ScheduleInput) {
+  return request<Meeting>("/meetings/schedule", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }

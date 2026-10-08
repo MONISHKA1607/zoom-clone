@@ -27,3 +27,10 @@ export interface JoinResponse {
   meeting: Meeting;
   participant: Participant;
 }
+
+export interface ScheduleInput {
+  title: string;
+  description: string | null;
+  scheduled_at: string; // ISO string in UTC
+  duration_minutes: number;
+}

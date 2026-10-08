@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { createInstantMeeting, getRecentMeetings, getUpcomingMeetings } from "@/lib/api";
 import { saveParticipant } from "@/lib/session";
 
+import ScheduleModal from "@/components/ScheduleModal";
+
 import ActionButtons from "@/components/ActionButtons";
 import AppShell from "@/components/AppShell";
 import HeroClock from "@/components/HeroClock";
@@ -21,6 +23,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [showJoin, setShowJoin] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -69,9 +72,8 @@ export default function Home() {
         <ActionButtons
           creating={creating}
           onNewMeeting={handleNewMeeting}
-          // Wired up in the next steps (join, schedule)
           onJoin={() => setShowJoin(true)}
-          onSchedule={() => {}}
+          onSchedule={() => setShowSchedule(true)}
         />
 
         {actionError && (
@@ -101,7 +103,13 @@ export default function Home() {
           />
         </div>
       </div>
-    {showJoin && <JoinModal onClose={() => setShowJoin(false)} />}
+      {showJoin && <JoinModal onClose={() => setShowJoin(false)} />}
+      {showSchedule && (
+        <ScheduleModal
+          onClose={() => setShowSchedule(false)}
+          onScheduled={loadMeetings}
+        />
+      )}
     </AppShell>
   );
 }
