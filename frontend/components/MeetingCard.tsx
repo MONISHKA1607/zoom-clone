@@ -53,7 +53,7 @@ export default function MeetingCard({ meeting, variant }: MeetingCardProps) {
             {copied ? <Check size={16} /> : <Copy size={16} />}
           </button>
           <Link
-            href={`/meeting/${meeting.meeting_code}`}
+            href={`/meeting/${meeting.meeting_code}?host=1`}
             className="rounded-lg bg-zoom-blue px-4 py-2 text-sm font-bold text-white hover:bg-zoom-blue-dark"
           >
             Start

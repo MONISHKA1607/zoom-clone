@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import JoinModal from "@/components/JoinModal";
 import { useRouter } from "next/navigation";
 import { createInstantMeeting, getRecentMeetings, getUpcomingMeetings } from "@/lib/api";
 import { saveParticipant } from "@/lib/session";
@@ -18,6 +19,8 @@ export default function Home() {
   const [recent, setRecent] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [showJoin, setShowJoin] = useState(false);
 
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -67,7 +70,7 @@ export default function Home() {
           creating={creating}
           onNewMeeting={handleNewMeeting}
           // Wired up in the next steps (join, schedule)
-          onJoin={() => {}}
+          onJoin={() => setShowJoin(true)}
           onSchedule={() => {}}
         />
 
@@ -98,6 +101,7 @@ export default function Home() {
           />
         </div>
       </div>
+    {showJoin && <JoinModal onClose={() => setShowJoin(false)} />}
     </AppShell>
   );
 }

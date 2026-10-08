@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 def as_utc(dt: Optional[datetime]) -> Optional[datetime]:
@@ -29,7 +29,15 @@ class ScheduleMeetingRequest(BaseModel):
 
 class JoinRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=50)
-    user_id: Optional[int] = None  # only set when the default user starts their own meeting
+    user_id: Optional[int] = None
+
+    @field_validator("display_name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Display name cannot be empty")
+        return value
 
 
 class LeaveRequest(BaseModel):

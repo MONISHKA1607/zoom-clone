@@ -43,3 +43,14 @@ export function leaveMeeting(code: string, participantId: number) {
     body: JSON.stringify({ participant_id: participantId }),
   });
 }
+
+export function joinMeeting(
+  code: string,
+  displayName: string,
+  userId: number | null = null
+) {
+  return request<JoinResponse>(`/meetings/${code}/join`, {
+    method: "POST",
+    body: JSON.stringify({ display_name: displayName, user_id: userId }),
+  });
+}
