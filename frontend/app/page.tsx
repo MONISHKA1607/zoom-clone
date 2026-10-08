@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useRouter } from "next/navigation";
+import { createInstantMeeting, getRecentMeetings, getUpcomingMeetings } from "@/lib/api";
+import { saveParticipant } from "@/lib/session";
+
 import ActionButtons from "@/components/ActionButtons";
 import AppShell from "@/components/AppShell";
 import HeroClock from "@/components/HeroClock";
 import MeetingSection from "@/components/MeetingSection";
 import QuickLinks from "@/components/QuickLinks";
-import { getRecentMeetings, getUpcomingMeetings } from "@/lib/api";
 import type { Meeting } from "@/lib/types";
 
 export default function Home() {
@@ -15,6 +18,25 @@ export default function Home() {
   const [recent, setRecent] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function handleNewMeeting() {
+    if (creating) return; // ignore double clicks
+    setCreating(true);
+    setActionError(null);
+    try {
+      const { meeting, participant } = await createInstantMeeting();
+      saveParticipant(meeting.meeting_code, participant);
+      router.push(`/meeting/${meeting.meeting_code}`);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Couldn't start the meeting");
+      setCreating(false);
+    }
+    // On success we deliberately leave `creating` true: the page is navigating away.
+  }
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -42,11 +64,18 @@ export default function Home() {
         <HeroClock />
 
         <ActionButtons
-          // Wired up in the next steps (instant, join, schedule)
-          onNewMeeting={() => {}}
+          creating={creating}
+          onNewMeeting={handleNewMeeting}
+          // Wired up in the next steps (join, schedule)
           onJoin={() => {}}
           onSchedule={() => {}}
         />
+
+        {actionError && (
+          <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700">
+            {actionError}
+          </p>
+        )}
 
         <QuickLinks />
 

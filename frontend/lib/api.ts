@@ -1,4 +1,4 @@
-import { Meeting } from "./types";
+import { JoinResponse, Meeting } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -24,4 +24,22 @@ export function getUpcomingMeetings() {
 
 export function getRecentMeetings() {
   return request<Meeting[]>("/meetings/recent");
+}
+
+export function createInstantMeeting() {
+  return request<JoinResponse>("/meetings/instant", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function getMeeting(code: string) {
+  return request<Meeting>(`/meetings/${code}`);
+}
+
+export function leaveMeeting(code: string, participantId: number) {
+  return request<{ status: string }>(`/meetings/${code}/leave`, {
+    method: "POST",
+    body: JSON.stringify({ participant_id: participantId }),
+  });
 }

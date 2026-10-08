@@ -7,13 +7,15 @@ interface ActionTileProps {
   color: string;
   onClick: () => void;
   hasDropdown?: boolean;
+  disabled?: boolean;
 }
 
-function ActionTile({ label, icon, color, onClick, hasDropdown }: ActionTileProps) {
+function ActionTile({ label, icon, color, onClick, hasDropdown, disabled }: ActionTileProps) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-3 focus:outline-none"
+      disabled={disabled}
+      className="group flex flex-col items-center gap-3 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span
         className={`flex h-[70px] w-[70px] items-center justify-center rounded-[22px] text-white transition group-hover:brightness-90 group-focus-visible:ring-2 group-focus-visible:ring-zoom-blue group-focus-visible:ring-offset-2 ${color}`}
@@ -32,18 +34,20 @@ interface ActionButtonsProps {
   onNewMeeting: () => void;
   onJoin: () => void;
   onSchedule: () => void;
+  creating?: boolean;
 }
 
 export default function ActionButtons({
   onNewMeeting,
   onJoin,
-  onSchedule,
+  onSchedule, creating
 }: ActionButtonsProps) {
   return (
     <div className="flex justify-center gap-10 sm:gap-14">
-      <ActionTile
-        label="New meeting"
-        hasDropdown
+            <ActionTile
+        label={creating ? "Starting..." : "New meeting"}
+        hasDropdown={!creating}
+        disabled={creating}
         color="bg-zoom-orange"
         icon={<VideoOff size={34} strokeWidth={2.5} />}
         onClick={onNewMeeting}
