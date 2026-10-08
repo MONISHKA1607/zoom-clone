@@ -1,10 +1,11 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import PreJoin from "@/components/PreJoin";
-import { getMeeting, leaveMeeting } from "@/lib/api";
+import PreJoin, { type JoinSettings } from "@/components/PreJoin";
+import Room from "@/components/room/Room";
+import { getMeeting } from "@/lib/api";
 import { clearParticipant, loadParticipant } from "@/lib/session";
 import type { Meeting, Participant } from "@/lib/types";
 
@@ -16,7 +17,8 @@ function CenteredScreen({ children }: { children: ReactNode }) {
   );
 }
 
-// Placeholder room. The real Zoom-style room replaces the last return in a later step.
+const DEFAULT_SETTINGS: JoinSettings = { micOn: true, cameraOn: false };
+
 export default function MeetingRoom() {
   const { code } = useParams<{ code: string }>();
   const searchParams = useSearchParams();
@@ -25,10 +27,9 @@ export default function MeetingRoom() {
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [participant, setParticipant] = useState<Participant | null>(null);
+  const [settings, setSettings] = useState<JoinSettings>(DEFAULT_SETTINGS);
   const [storageChecked, setStorageChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [leaveError, setLeaveError] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     // sessionStorage only exists in the browser, so we read it in an effect.
@@ -39,30 +40,28 @@ export default function MeetingRoom() {
       .catch((e: Error) => setError(e.message));
   }, [code]);
 
-  async function handleLeave() {
-    if (!participant) return;
-    setLeaving(true);
-    setLeaveError(null);
-    try {
-      await leaveMeeting(code, participant.id);
-      clearParticipant(code);
-      router.push("/");
-    } catch (e) {
-      setLeaveError(e instanceof Error ? e.message : "Couldn't leave the meeting");
-      setLeaving(false);
-    }
-  }
+  // Called by the room when polling finds that the host ended the meeting.
+  // useCallback keeps the function identity stable, so the room's polling
+  // effect doesn't restart on every render.
+  const handleEnded = useCallback(() => {
+    clearParticipant(code);
+    setMeeting((m) => (m ? { ...m, status: "ended" } : m));
+  }, [code]);
+
+  const backButton = (
+    <button
+      onClick={() => router.push("/")}
+      className="rounded-lg bg-zoom-blue px-6 py-2 font-bold hover:bg-zoom-blue-dark"
+    >
+      Back to home
+    </button>
+  );
 
   if (error) {
     return (
       <CenteredScreen>
         <p className="text-red-400">{error}</p>
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-lg bg-zoom-blue px-6 py-2 font-bold hover:bg-zoom-blue-dark"
-        >
-          Back to home
-        </button>
+        {backButton}
       </CenteredScreen>
     );
   }
@@ -81,12 +80,7 @@ export default function MeetingRoom() {
     return (
       <CenteredScreen>
         <p className="text-yellow-400">This meeting has ended.</p>
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-lg bg-zoom-blue px-6 py-2 font-bold hover:bg-zoom-blue-dark"
-        >
-          Back to home
-        </button>
+        {backButton}
       </CenteredScreen>
     );
   }
@@ -96,8 +90,9 @@ export default function MeetingRoom() {
       <PreJoin
         meeting={meeting}
         asHost={asHost}
-        onJoined={(updatedMeeting, newParticipant) => {
+        onJoined={(updatedMeeting, newParticipant, chosen) => {
           setMeeting(updatedMeeting);
+          setSettings(chosen);
           setParticipant(newParticipant);
         }}
       />
@@ -105,21 +100,12 @@ export default function MeetingRoom() {
   }
 
   return (
-    <CenteredScreen>
-      <h1 className="text-2xl font-bold">{meeting.title}</h1>
-      <p className="text-neutral-400">Meeting ID: {meeting.meeting_code}</p>
-      <p className="text-sm text-neutral-500">{meeting.invite_link}</p>
-      <p>
-        Joined as <b>{participant.display_name}</b> ({participant.role})
-      </p>
-      {leaveError && <p className="text-red-400">{leaveError}</p>}
-      <button
-        onClick={handleLeave}
-        disabled={leaving}
-        className="mt-4 rounded-lg bg-red-600 px-6 py-2 font-bold hover:bg-red-700 disabled:opacity-60"
-      >
-        {leaving ? "Leaving..." : "Leave"}
-      </button>
-    </CenteredScreen>
+    <Room
+      meeting={meeting}
+      participant={participant}
+      initialMicOn={settings.micOn}
+      initialCameraOn={settings.cameraOn}
+      onEnded={handleEnded}
+    />
   );
 }

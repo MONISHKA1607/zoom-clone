@@ -1,4 +1,4 @@
-import { JoinResponse, Meeting, ScheduleInput } from "./types";
+import { JoinResponse, Meeting, Participant, ScheduleInput } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -64,4 +64,8 @@ export function scheduleMeeting(input: ScheduleInput) {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function getParticipants(code: string) {
+  return request<Participant[]>(`/meetings/${code}/participants`);
 }
