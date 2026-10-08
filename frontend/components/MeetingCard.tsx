@@ -1,0 +1,70 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { Check, Copy } from "lucide-react";
+
+import { formatDate, formatTime, formatTimeRange } from "@/lib/format";
+import type { Meeting } from "@/lib/types";
+
+interface MeetingCardProps {
+  meeting: Meeting;
+  variant: "upcoming" | "recent";
+}
+
+export default function MeetingCard({ meeting, variant }: MeetingCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  // Instant meetings have no scheduled_start, so fall back to created_at.
+  const when = meeting.scheduled_start ?? meeting.created_at;
+
+  async function copyInviteLink() {
+    if (!meeting.invite_link) return;
+    try {
+      await navigator.clipboard.writeText(meeting.invite_link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard can be blocked by the browser; fail silently.
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-zoom-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex gap-4">
+        <div className="w-32 shrink-0">
+          <p className="text-sm font-bold">{formatDate(when)}</p>
+          <p className="text-xs text-zoom-muted">
+            {variant === "upcoming"
+              ? formatTimeRange(when, meeting.duration_minutes)
+              : formatTime(when)}
+          </p>
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-bold">{meeting.title}</p>
+          <p className="text-xs text-zoom-muted">
+            Meeting ID: {meeting.meeting_code}
+          </p>
+        </div>
+      </div>
+
+      {variant === "upcoming" && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyInviteLink}
+            aria-label="Copy invite link"
+            className="rounded-lg border border-zoom-border p-2 text-zoom-muted hover:bg-zoom-bg"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+          </button>
+          <Link
+            href={`/meeting/${meeting.meeting_code}`}
+            className="rounded-lg bg-zoom-blue px-4 py-2 text-sm font-bold text-white hover:bg-zoom-blue-dark"
+          >
+            Start
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
