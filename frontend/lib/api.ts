@@ -41,10 +41,10 @@ export function getMeeting(code: string) {
   return request<Meeting>(`/meetings/${code}`);
 }
 
-export function leaveMeeting(code: string, participantId: number) {
+export function leaveMeeting(code: string, participantId: number, endForAll = false) {
   return request<{ status: string }>(`/meetings/${code}/leave`, {
     method: "POST",
-    body: JSON.stringify({ participant_id: participantId }),
+    body: JSON.stringify({ participant_id: participantId, end_for_all: endForAll }),
   });
 }
 

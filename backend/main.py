@@ -110,7 +110,7 @@ def join_meeting(code: str, payload: schemas.JoinRequest, db: Session = Depends(
 
 @app.post("/meetings/{code}/leave")
 def leave_meeting(code: str, payload: schemas.LeaveRequest, db: Session = Depends(get_db)):
-    crud.leave_meeting(db, code, payload.participant_id)
+    crud.leave_meeting(db, code, payload.participant_id, payload.end_for_all)
     return {"status": "left"}
 
 

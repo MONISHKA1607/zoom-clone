@@ -16,7 +16,7 @@ export default function ParticipantsPanel({
 }: ParticipantsPanelProps) {
   return (
     // Phone: covers the video area. Larger screens: a 320px column beside the grid.
-    <aside className="absolute inset-0 z-20 flex flex-col rounded-xl bg-neutral-800 sm:static sm:w-80 sm:shrink-0">
+    <aside className="absolute inset-0 z-20 flex flex-col bg-[#1c1c1c] sm:static sm:w-80 sm:shrink-0 sm:border-l sm:border-neutral-800">
       <div className="flex items-center justify-between border-b border-neutral-700 px-4 py-3">
         <h2 className="font-bold">Participants ({participants.length})</h2>
         <button

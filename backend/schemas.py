@@ -17,7 +17,7 @@ def as_utc(dt: Optional[datetime]) -> Optional[datetime]:
 # ---------- Request bodies (what the frontend sends) ----------
 
 class InstantMeetingRequest(BaseModel):
-    title: str = Field(default="Instant Meeting", min_length=1, max_length=100)
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100)
 
 
 class ScheduleMeetingRequest(BaseModel):
@@ -42,6 +42,7 @@ class JoinRequest(BaseModel):
 
 class LeaveRequest(BaseModel):
     participant_id: int
+    end_for_all: bool = False
 
 
 # ---------- Response bodies (what the API returns) ----------

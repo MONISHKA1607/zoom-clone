@@ -4,17 +4,20 @@ import type { LucideIcon } from "lucide-react";
 interface SidebarItem {
   label: string;
   icon: LucideIcon;
-  active?: boolean;
 }
 
 const ITEMS: SidebarItem[] = [
-  { label: "Home", icon: Home, active: true },
+  { label: "Home", icon: Home },
   { label: "Chat", icon: MessageSquare },
   { label: "Meetings", icon: Video },
   { label: "Contacts", icon: Contact },
 ];
 
-function SidebarLink({ label, icon: Icon, active }: SidebarItem) {
+function SidebarLink({
+  label,
+  icon: Icon,
+  active,
+}: SidebarItem & { active?: boolean }) {
   return (
     <a
       href="#"
@@ -30,12 +33,12 @@ function SidebarLink({ label, icon: Icon, active }: SidebarItem) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ activeItem = "Home" }: { activeItem?: string | null }) {
   return (
     <aside className="hidden w-[84px] shrink-0 flex-col justify-between px-1 py-1 md:flex">
       <nav className="flex flex-col gap-1">
         {ITEMS.map((item) => (
-          <SidebarLink key={item.label} {...item} />
+          <SidebarLink key={item.label} {...item} active={item.label === activeItem} />
         ))}
       </nav>
       <SidebarLink label="Settings" icon={Settings} />

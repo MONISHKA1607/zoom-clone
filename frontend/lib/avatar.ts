@@ -9,9 +9,9 @@ export function initials(name: string): string {
 
 // Full class names (not built dynamically) so Tailwind can find them in the source.
 const COLORS = [
+  "bg-zoom-purple",
   "bg-blue-600",
   "bg-emerald-600",
-  "bg-purple-600",
   "bg-orange-600",
   "bg-pink-600",
   "bg-teal-600",
@@ -25,4 +25,10 @@ export function avatarColor(name: string): string {
     hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   }
   return COLORS[hash % COLORS.length];
+}
+
+// "Monishka Mittal" -> "M" (Zoom shows a single letter on the tile)
+export function firstLetter(name: string): string {
+  const ch = name.trim()[0];
+  return ch ? ch.toUpperCase() : "?";
 }

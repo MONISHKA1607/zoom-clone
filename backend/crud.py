@@ -95,7 +95,7 @@ def create_instant_meeting(db: Session, title: str):
 
     meeting = models.Meeting(
         meeting_code=generate_meeting_code(db),
-        title=title,
+        title=title or f"{host.name}'s Zoom Meeting",
         host_id=host.id,
         type="instant",
         status="active",
@@ -166,7 +166,7 @@ def join_meeting(db: Session, code: str, display_name: str, user_id):
     return meeting, participant
 
 
-def leave_meeting(db: Session, code: str, participant_id: int):
+def leave_meeting(db: Session, code: str, participant_id: int, end_for_all: bool = False):
     meeting = get_meeting_by_code(db, code)
     if meeting is None:
         raise MeetingNotFoundError()
@@ -175,16 +175,26 @@ def leave_meeting(db: Session, code: str, participant_id: int):
     if participant is None or participant.meeting_id != meeting.id:
         raise ParticipantNotFoundError()
 
-    now = utcnow_naive()
-    if participant.left_at is None:
-        participant.left_at = now
+    if participant.left_at is not None:
+        return  # already left, so nothing to do (also stops a stale host promoting twice)
 
-    # Host leaving ends the meeting for everyone.
+    now = utcnow_naive()
+    participant.left_at = now
+
     if participant.role == "host":
-        meeting.status = "ended"
-        for p in meeting.participants:
-            if p.left_at is None:
+        # Everyone still in the meeting, in the order they joined.
+        remaining = sorted(
+            (p for p in meeting.participants if p.left_at is None),
+            key=lambda p: p.joined_at,
+        )
+        if end_for_all or not remaining:
+            # Close the meeting for everyone (or the last person just left).
+            meeting.status = "ended"
+            for p in remaining:
                 p.left_at = now
+        else:
+            # Host leaves but others stay: hand the host role to whoever joined first.
+            remaining[0].role = "host"
 
     db.commit()
 

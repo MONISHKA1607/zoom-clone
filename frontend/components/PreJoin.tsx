@@ -1,13 +1,12 @@
 "use client";
 
-import { Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { Mic, Video } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { joinMeeting } from "@/lib/api";
 import { saveParticipant } from "@/lib/session";
 import type { Meeting, Participant } from "@/lib/types";
-import { useCamera } from "@/lib/useCamera";
-import ParticipantTile from "./room/ParticipantTile";
+import Stage from "./room/Stage";
 
 // What the user chose on this screen; the room starts with the same settings.
 export interface JoinSettings {
@@ -21,15 +20,30 @@ interface PreJoinProps {
   onJoined: (meeting: Meeting, participant: Participant, settings: JoinSettings) => void;
 }
 
+// A simple stand-in for Zoom's artwork.
+function Illustration() {
+  return (
+    <div className="relative mx-auto flex h-40 w-56 items-center justify-center rounded-xl bg-[#e9edff]">
+      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#6f8cff] text-white">
+        <Video size={32} />
+      </span>
+      <span className="absolute right-10 top-8 flex h-10 w-10 items-center justify-center rounded-xl bg-[#3b3bd6] text-white">
+        <Mic size={20} />
+      </span>
+    </div>
+  );
+}
+
 export default function PreJoin({ meeting, asHost, onJoined }: PreJoinProps) {
-  const [name, setName] = useState(asHost ? (meeting.host_name ?? "") : "");
-  const [micOn, setMicOn] = useState(true);
-  const camera = useCamera(false); // off by default: no permission prompt until asked
+  const hostName = meeting.host_name ?? "";
+  const [name, setName] = useState(asHost ? hostName : "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  // Zoom knows who you are because you're logged in. We only ask guests.
+  const needsName = !(asHost && hostName);
+
+  async function join(settings: JoinSettings) {
     const trimmed = name.trim();
     if (!trimmed) {
       setError("Please enter your name.");
@@ -45,81 +59,85 @@ export default function PreJoin({ meeting, asHost, onJoined }: PreJoinProps) {
         asHost ? meeting.host_id : null
       );
       saveParticipant(result.meeting.meeting_code, result.participant);
-      onJoined(result.meeting, result.participant, {
-        micOn,
-        cameraOn: camera.enabled,
-      });
+      onJoined(result.meeting, result.participant, settings);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't join the meeting.");
       setSubmitting(false);
     }
   }
 
-  const toggleClass =
-    "flex flex-1 items-center justify-center gap-2 rounded-lg border border-zoom-border py-2 text-sm font-bold hover:bg-zoom-bg";
+  // Enter in the name box = the primary button.
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    void join({ micOn: true, cameraOn: true });
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-900 p-4">
+    <div className="relative flex min-h-0 flex-1 overflow-y-auto bg-black text-white">
+      {/* The dark video area sits behind the card, with the name label like Zoom's */}
+      <div className="absolute inset-0 flex">
+        <Stage className="bg-[#141414]">
+          {name.trim() && (
+            <span className="absolute bottom-0 left-0 bg-black/70 px-2 py-1 text-xs">
+              {name.trim()}
+            </span>
+          )}
+        </Stage>
+      </div>
+
+      {/* m-auto centers the card, and lets it scroll instead of being cut off when short */}
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+        className="relative z-10 m-auto w-full max-w-[460px] rounded-xl border border-neutral-700 bg-[#1c1c1c] px-6 py-8 text-center sm:px-10"
       >
-        <div>
-          <h1 className="text-xl font-bold">{meeting.title}</h1>
-          <p className="text-sm text-zoom-muted">Meeting ID: {meeting.meeting_code}</p>
-        </div>
+        <Illustration />
 
-        <div className="aspect-video">
-          <ParticipantTile
-            name={name.trim() || "Your name"}
-            isHost={false}
-            isMe={false}
-            micMuted={!micOn}
-            stream={camera.stream}
-          />
-        </div>
+        <h1 className="mt-6 text-lg font-bold">
+          Do you want people to see you in the meeting?
+        </h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          You can still turn off your microphone and camera anytime in the meeting
+        </p>
 
-        {/* type="button" matters: buttons inside a <form> submit it by default. */}
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setMicOn((on) => !on)} className={toggleClass}>
-            {micOn ? <Mic size={18} /> : <MicOff size={18} className="text-red-500" />}
-            {micOn ? "Mute" : "Unmute"}
-          </button>
-          <button type="button" onClick={camera.toggle} className={toggleClass}>
-            {camera.enabled ? (
-              <Video size={18} />
-            ) : (
-              <VideoOff size={18} className="text-red-500" />
-            )}
-            {camera.enabled ? "Stop video" : "Start video"}
-          </button>
-        </div>
-        {camera.error && <p className="text-sm text-red-600">{camera.error}</p>}
+        {needsName && (
+          <div className="mt-5 text-left">
+            <label htmlFor="display-name" className="sr-only">
+              Your name
+            </label>
+            <input
+              id="display-name"
+              autoFocus
+              maxLength={50}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              className="w-full rounded-md border border-neutral-600 bg-[#2a2a2a] px-3 py-2 text-sm outline-none placeholder:text-neutral-500 focus:border-[#0e72ed]"
+            />
+          </div>
+        )}
 
-        <div>
-          <label htmlFor="display-name" className="mb-1 block text-sm font-bold">
-            Your name
-          </label>
-          <input
-            id="display-name"
-            autoFocus
-            maxLength={50}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
-            className="w-full rounded-lg border border-zoom-border px-3 py-2 outline-none focus:border-zoom-blue focus:ring-2 focus:ring-zoom-blue/30"
-          />
-        </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-zoom-blue py-2.5 font-bold text-white hover:bg-zoom-blue-dark disabled:opacity-60"
+          className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#0e72ed] px-4 py-2.5 text-sm font-bold hover:bg-[#0b5cd5] disabled:opacity-60"
         >
-          {submitting ? "Joining..." : asHost ? "Start meeting" : "Join"}
+          <Video size={16} />
+          {submitting ? "Joining..." : "Use microphone and camera"}
         </button>
+
+        <div className="mt-3">
+          {/* type="button": buttons inside a form submit it by default */}
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => void join({ micOn: false, cameraOn: false })}
+            className="text-sm text-[#4a9bff] hover:underline disabled:opacity-60"
+          >
+            Continue without microphone and camera
+          </button>
+        </div>
       </form>
     </div>
   );

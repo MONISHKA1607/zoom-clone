@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import AppShell from "@/components/AppShell";
 import PreJoin, { type JoinSettings } from "@/components/PreJoin";
 import Room from "@/components/room/Room";
 import { getMeeting } from "@/lib/api";
@@ -11,7 +12,7 @@ import type { Meeting, Participant } from "@/lib/types";
 
 function CenteredScreen({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-900 p-6 text-white">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-black p-6 text-white">
       {children}
     </div>
   );
@@ -40,7 +41,7 @@ export default function MeetingRoom() {
       .catch((e: Error) => setError(e.message));
   }, [code]);
 
-  // Called by the room when polling finds that the host ended the meeting.
+  // Called by the room when polling finds that the meeting was ended.
   // useCallback keeps the function identity stable, so the room's polling
   // effect doesn't restart on every render.
   const handleEnded = useCallback(() => {
@@ -57,55 +58,59 @@ export default function MeetingRoom() {
     </button>
   );
 
-  if (error) {
-    return (
-      <CenteredScreen>
-        <p className="text-red-400">{error}</p>
-        {backButton}
-      </CenteredScreen>
-    );
-  }
+  function renderScreen() {
+    if (error) {
+      return (
+        <CenteredScreen>
+          <p className="text-red-400">{error}</p>
+          {backButton}
+        </CenteredScreen>
+      );
+    }
 
-  // Wait until both the meeting and sessionStorage have been read,
-  // otherwise the pre-join screen would flash for people already inside.
-  if (!meeting || !storageChecked) {
-    return (
-      <CenteredScreen>
-        <p className="text-neutral-400">Loading meeting...</p>
-      </CenteredScreen>
-    );
-  }
+    // Wait until both the meeting and sessionStorage have been read,
+    // otherwise the pre-join screen would flash for people already inside.
+    if (!meeting || !storageChecked) {
+      return (
+        <CenteredScreen>
+          <p className="text-neutral-400">Loading meeting...</p>
+        </CenteredScreen>
+      );
+    }
 
-  if (meeting.status === "ended") {
-    return (
-      <CenteredScreen>
-        <p className="text-yellow-400">This meeting has ended.</p>
-        {backButton}
-      </CenteredScreen>
-    );
-  }
+    if (meeting.status === "ended") {
+      return (
+        <CenteredScreen>
+          <p className="text-yellow-400">This meeting has ended.</p>
+          {backButton}
+        </CenteredScreen>
+      );
+    }
 
-  if (!participant) {
+    if (!participant) {
+      return (
+        <PreJoin
+          meeting={meeting}
+          asHost={asHost}
+          onJoined={(updatedMeeting, newParticipant, chosen) => {
+            setMeeting(updatedMeeting);
+            setSettings(chosen);
+            setParticipant(newParticipant);
+          }}
+        />
+      );
+    }
+
     return (
-      <PreJoin
+      <Room
         meeting={meeting}
-        asHost={asHost}
-        onJoined={(updatedMeeting, newParticipant, chosen) => {
-          setMeeting(updatedMeeting);
-          setSettings(chosen);
-          setParticipant(newParticipant);
-        }}
+        participant={participant}
+        initialMicOn={settings.micOn}
+        initialCameraOn={settings.cameraOn}
+        onEnded={handleEnded}
       />
     );
   }
 
-  return (
-    <Room
-      meeting={meeting}
-      participant={participant}
-      initialMicOn={settings.micOn}
-      initialCameraOn={settings.cameraOn}
-      onEnded={handleEnded}
-    />
-  );
+  return <AppShell variant="room">{renderScreen()}</AppShell>;
 }
