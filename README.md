@@ -224,14 +224,6 @@ JOIN users u ON u.id = m.host_id;
 - **Demo data is created in code** (`seed.py`) and only when the database is empty, so the app is never blank on a fresh deploy.
 - **Authorization is enforced on the server**: for example, only a host in the same meeting can remove a participant, whatever the interface shows.
 
-## Known limitations
-
-- **No real audio or video between people.** Your own camera preview works via `getUserMedia`, other participants appear as avatar tiles, and the mic button only changes the interface. Real calls would use WebRTC, with a signaling channel (WebSockets) and STUN/TURN servers.
-- **Closing a tab without clicking Leave** leaves that participant listed. A heartbeat with server-side expiry would fix this.
-- **A removed guest can rejoin** with the invite link; there is no ban list.
-- **Decorative controls** (search, Chat, Contacts, React, Share, Breakout Rooms, More, and similar) match Zoom's layout but are not functional.
-- **Free hosting**: the backend sleeps when idle, and its SQLite file is not kept across restarts or redeploys, so the demo data is recreated each time. Meetings created during a visit may disappear after a restart.
-
 ## Project structure
 
 ```
@@ -252,3 +244,14 @@ zoom-clone/
     │   └── room/                         # Room, RoomHeader, Stage, ParticipantTile, ControlBar, ParticipantsPanel, Toast
     └── lib/                              # api, types, format, session, meetingCode, avatar, useCamera
 ```
+
+
+
+## Known limitations
+
+- **No real audio or video between people.** Your own camera preview works via `getUserMedia`, other participants appear as avatar tiles, and the mic button only changes the interface. Real calls would use WebRTC, with a signaling channel (WebSockets) and STUN/TURN servers.
+- **Closing a tab without clicking Leave** leaves that participant listed. A heartbeat with server-side expiry would fix this.
+- **A removed guest can rejoin** with the invite link; there is no ban list.
+- **Decorative controls** (search, Chat, Contacts, React, Share, Breakout Rooms, More, and similar) match Zoom's layout but are not functional.
+- **Free hosting**: the backend sleeps when idle, and its SQLite file is not kept across restarts or redeploys, so the demo data is recreated each time. Meetings created during a visit may disappear after a restart.
+
