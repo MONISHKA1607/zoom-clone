@@ -95,17 +95,124 @@ Open http://localhost:3000.
 
 Errors use standard status codes: 404 not found, 410 meeting ended, 400 business-rule violation, 403 not allowed, 422 invalid input.
 
-## Database schema
+## Database design
 
+Three tables: **users**, **meetings** and **participants**. The `participants` table is the link between the other two (see below).
+
+```mermaid
+erDiagram
+    users ||--o{ meetings : "hosts"
+    meetings ||--o{ participants : "has"
+    users |o--o{ participants : "account (optional)"
+
+    users {
+        int id PK
+        string name
+        string email UK
+        string avatar
+        datetime created_at
+    }
+
+    meetings {
+        int id PK
+        string meeting_code UK
+        string title
+        string description
+        int host_id FK
+        string type
+        datetime scheduled_start
+        int duration_minutes
+        string status
+        datetime created_at
+    }
+
+    participants {
+        int id PK
+        int meeting_id FK
+        int user_id FK
+        string display_name
+        string role
+        datetime joined_at
+        datetime left_at
+    }
 ```
-users 1 ──< meetings 1 ──< participants
+
+*PK = primary key, FK = foreign key, UK = unique. To see the schema as created in SQLite, run `sqlite3 zoom_clone.db ".schema"` from `backend/`.*
+
+### Relationships
+
+| Relationship | Type | Foreign key | Meaning |
+|---|---|---|---|
+| users → meetings | one-to-many | `meetings.host_id` → `users.id` (required) | A user hosts many meetings, and every meeting has exactly one host |
+| meetings → participants | one-to-many | `participants.meeting_id` → `meetings.id` (required) | A meeting has many participants, and each participant row belongs to one meeting |
+| users → participants | one-to-many, optional | `participants.user_id` → `users.id` (nullable) | A user can appear in many meetings; a guest has no user |
+
+In real life, users and meetings are **many-to-many** (a person attends many meetings, and a meeting has many people). `participants` is the **junction table** that resolves this, and it also stores facts about one person's stay in one meeting: the name they used, their role, and when they joined and left.
+
+### Tables
+
+**users**
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | integer | primary key | |
+| `name` | text | not null | |
+| `email` | text | unique, not null | |
+| `avatar` | text | nullable | unused for now |
+| `created_at` | datetime | default now (UTC) | |
+
+**meetings**
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | integer | primary key | internal identifier |
+| `meeting_code` | text | unique, indexed, not null | public ID such as `123-456-7890`, used in links |
+| `title` | text | not null | |
+| `description` | text | nullable | |
+| `host_id` | integer | foreign key → `users.id`, not null | |
+| `type` | text | not null | `instant` or `scheduled` |
+| `scheduled_start` | datetime | nullable | null for instant meetings; stored in UTC |
+| `duration_minutes` | integer | nullable | null for instant meetings |
+| `status` | text | not null, default `scheduled` | `scheduled`, `active` or `ended` |
+| `created_at` | datetime | default now (UTC) | |
+
+**participants**
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | integer | primary key | |
+| `meeting_id` | integer | foreign key → `meetings.id`, not null | |
+| `user_id` | integer | foreign key → `users.id`, nullable | null for guests |
+| `display_name` | text | not null | the name shown inside the meeting |
+| `role` | text | not null, default `participant` | `host` or `participant` |
+| `joined_at` | datetime | default now (UTC) | |
+| `left_at` | datetime | nullable | null while the person is still in the meeting |
+
+### Why it is designed this way
+
+- **Separate `participants` table** instead of storing people inside `meetings`: one meeting has many people, the same person joins many meetings, and each stay needs its own `joined_at` and `left_at`.
+- **Nullable `user_id`**: there is no sign-in, so someone joining with a display name is a guest. Their identity in the meeting is `display_name`.
+- **Presence is derived, not stored**: `left_at IS NULL` means "currently in the meeting", so there is no separate "is online" flag that could go out of sync.
+- **`meeting_code` is separate from `id`**: the internal `id` is sequential and guessable. The code is random, unique, indexed for fast lookups, and is what appears in links.
+- **Derived values are not stored**: the host's name comes from joining `users`, and the invite link is built from the base URL and `meeting_code`. Whether a meeting counts as upcoming or recent is computed from `status` and its time slot, so it never goes stale.
+- **Allowed values** for `type`, `status` and `role` are checked by the API (Pydantic schemas and the service logic) before anything is written.
+- **Deleting a meeting** also deletes its participants (cascade configured in the SQLAlchemy model).
+- **All timestamps are UTC**, converted to the viewer's local time in the browser.
+
+### Example queries
+
+```sql
+-- Who is in a meeting right now?
+SELECT display_name, role
+FROM participants
+WHERE meeting_id = (SELECT id FROM meetings WHERE meeting_code = '123-456-7890')
+  AND left_at IS NULL;
+
+-- Meetings with their host
+SELECT m.title, m.meeting_code, u.name AS host
+FROM meetings m
+JOIN users u ON u.id = m.host_id;
 ```
-
-- **users**: `id`, `name`, `email` (unique), `avatar`, `created_at`
-- **meetings**: `id`, `meeting_code` (unique, indexed), `title`, `description`, `host_id` → users, `type` (`instant` or `scheduled`), `scheduled_start`, `duration_minutes`, `status` (`scheduled`, `active` or `ended`), `created_at`
-- **participants**: `id`, `meeting_id` → meetings, `user_id` → users (nullable), `display_name`, `role` (`host` or `participant`), `joined_at`, `left_at` (null while still in the meeting)
-
-`participants.user_id` is nullable because there is no sign-in: anyone joining with a display name is a guest.
 
 ## Design decisions and assumptions
 
