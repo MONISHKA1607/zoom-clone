@@ -25,7 +25,7 @@ export default function MeetingSection({
       {loading && (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-[120px] animate-pulse rounded-xl bg-zoom-bg" />
+            <div key={i} className="h-[120px] animate-pulse motion-reduce:animate-none rounded-xl bg-zoom-bg" />
           ))}
         </div>
       )}

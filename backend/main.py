@@ -50,6 +50,9 @@ async def participant_not_found_handler(request: Request, exc: crud.ParticipantN
 async def value_error_handler(request: Request, exc: ValueError):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
+@app.exception_handler(crud.NotAllowedError)
+async def not_allowed_handler(request: Request, exc: crud.NotAllowedError):
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 # ---------- Helper ----------
 
@@ -113,7 +116,17 @@ def leave_meeting(code: str, payload: schemas.LeaveRequest, db: Session = Depend
     crud.leave_meeting(db, code, payload.participant_id, payload.end_for_all)
     return {"status": "left"}
 
+@app.post("/meetings/{code}/participants/{participant_id}/remove")
+def remove_participant(
+    code: str,
+    participant_id: int,
+    payload: schemas.RemoveRequest,
+    db: Session = Depends(get_db),
+):
+    crud.remove_participant(db, code, participant_id, payload.requester_id)
+    return {"status": "removed"}
 
 @app.get("/meetings/{code}/participants", response_model=List[schemas.ParticipantOut])
 def list_participants(code: str, db: Session = Depends(get_db)):
     return crud.get_active_participants(db, code)
+

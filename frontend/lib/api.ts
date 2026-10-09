@@ -69,3 +69,13 @@ export function scheduleMeeting(input: ScheduleInput) {
 export function getParticipants(code: string) {
   return request<Participant[]>(`/meetings/${code}/participants`);
 }
+
+export function removeParticipant(code: string, participantId: number, requesterId: number) {
+  return request<{ status: string }>(
+    `/meetings/${code}/participants/${participantId}/remove`,
+    {
+      method: "POST",
+      body: JSON.stringify({ requester_id: requesterId }),
+    }
+  );
+}

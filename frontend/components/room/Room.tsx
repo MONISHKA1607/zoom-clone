@@ -1,9 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { getMeeting, getParticipants, leaveMeeting } from "@/lib/api";
+import {
+  getMeeting,
+  getParticipants,
+  leaveMeeting,
+  removeParticipant,
+} from "@/lib/api";
 import { clearParticipant } from "@/lib/session";
 import type { Meeting, Participant } from "@/lib/types";
 import { useCamera } from "@/lib/useCamera";
@@ -29,7 +34,8 @@ interface RoomProps {
   participant: Participant; // "me": who I joined as
   initialMicOn: boolean;
   initialCameraOn: boolean;
-  onEnded: () => void; // called when we discover the host ended the meeting
+  onEnded: () => void; // the meeting was ended
+  onRemoved: () => void; // the host removed me
 }
 
 export default function Room({
@@ -38,6 +44,7 @@ export default function Room({
   initialMicOn,
   initialCameraOn,
   onEnded,
+  onRemoved,
 }: RoomProps) {
   const router = useRouter();
   const code = meeting.meeting_code;
@@ -48,8 +55,12 @@ export default function Room({
   const [participants, setParticipants] = useState<Participant[]>([participant]);
   const [endMenuOpen, setEndMenuOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [cameraNoticeDismissed, setCameraNoticeDismissed] = useState(false);
+
+  // A ref, not state: the polling effect below is set up once and lives a long
+  // time, and a ref always holds the CURRENT value without restarting the effect.
+  const leavingRef = useRef(false);
 
   // My role comes from the server's latest list, not from what I joined as,
   // because the host role can be handed to me if the host leaves.
@@ -66,9 +77,17 @@ export default function Room({
           getMeeting(code),
           getParticipants(code),
         ]);
-        if (stopped) return;
+        // If I'm the one leaving, my own leave would look like "ended" or "removed".
+        if (stopped || leavingRef.current) return;
+
         if (latestMeeting.status === "ended") {
           onEnded();
+          return;
+        }
+        // The list only contains people still in the meeting.
+        // If I'm not in it any more, the host removed me.
+        if (!latestParticipants.some((p) => p.id === participant.id)) {
+          onRemoved();
           return;
         }
         setParticipants(latestParticipants);
@@ -83,19 +102,31 @@ export default function Room({
       stopped = true; // ignore any request that finishes after we've left
       clearInterval(id);
     };
-  }, [code, onEnded]);
+  }, [code, participant.id, onEnded, onRemoved]);
 
   async function leave(endForAll: boolean) {
+    leavingRef.current = true;
     setLeaving(true);
-    setLeaveError(null);
+    setActionError(null);
     try {
       await leaveMeeting(code, participant.id, endForAll);
       clearParticipant(code);
       router.push("/");
     } catch (e) {
-      setLeaveError(e instanceof Error ? e.message : "Couldn't leave the meeting");
+      leavingRef.current = false;
+      setActionError(e instanceof Error ? e.message : "Couldn't leave the meeting");
       setLeaving(false);
       setEndMenuOpen(false);
+    }
+  }
+
+  async function handleRemove(targetId: number) {
+    try {
+      await removeParticipant(code, targetId, participant.id);
+      // Update the list right away instead of waiting for the next poll.
+      setParticipants((list) => list.filter((p) => p.id !== targetId));
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Couldn't remove that participant");
     }
   }
 
@@ -134,6 +165,8 @@ export default function Room({
           <ParticipantsPanel
             participants={participants}
             myId={participant.id}
+            canRemove={isHost}
+            onRemove={handleRemove}
             onClose={() => setPanelOpen(false)}
           />
         )}
@@ -149,7 +182,7 @@ export default function Room({
               for the best experience.
             </Toast>
           )}
-          {leaveError && <Toast onDismiss={() => setLeaveError(null)}>{leaveError}</Toast>}
+          {actionError && <Toast onDismiss={() => setActionError(null)}>{actionError}</Toast>}
         </div>
       </div>
 

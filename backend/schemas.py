@@ -87,3 +87,7 @@ class MeetingOut(BaseModel):
 class JoinResponse(BaseModel):
     meeting: MeetingOut
     participant: ParticipantOut
+
+class RemoveRequest(BaseModel):
+    requester_id: int  # the participant id of whoever is asking
+

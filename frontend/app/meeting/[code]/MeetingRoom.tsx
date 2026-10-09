@@ -26,6 +26,8 @@ export default function MeetingRoom() {
   const asHost = searchParams.get("host") === "1";
   const router = useRouter();
 
+  const [removed, setRemoved] = useState(false);
+
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [settings, setSettings] = useState<JoinSettings>(DEFAULT_SETTINGS);
@@ -47,6 +49,11 @@ export default function MeetingRoom() {
   const handleEnded = useCallback(() => {
     clearParticipant(code);
     setMeeting((m) => (m ? { ...m, status: "ended" } : m));
+  }, [code]);
+
+  const handleRemoved = useCallback(() => {
+    clearParticipant(code);
+    setRemoved(true);
   }, [code]);
 
   const backButton = (
@@ -87,6 +94,15 @@ export default function MeetingRoom() {
       );
     }
 
+    if (removed) {
+      return (
+        <CenteredScreen>
+          <p className="text-yellow-400">The host removed you from this meeting.</p>
+          {backButton}
+        </CenteredScreen>
+      );
+    }
+
     if (!participant) {
       return (
         <PreJoin
@@ -108,6 +124,7 @@ export default function MeetingRoom() {
         initialMicOn={settings.micOn}
         initialCameraOn={settings.cameraOn}
         onEnded={handleEnded}
+        onRemoved={handleRemoved}
       />
     );
   }

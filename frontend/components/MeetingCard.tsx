@@ -32,7 +32,19 @@ export default function MeetingCard({ meeting, variant }: MeetingCardProps) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-zoom-border p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 text-sm leading-6">
-        <p className="truncate text-base font-bold">{meeting.title}</p>
+        <p className="flex min-w-0 items-center gap-2 text-base font-bold">
+          <span className="truncate">{meeting.title}</span>
+          {meeting.status === "active" && (
+            <span className="shrink-0 rounded bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+              In progress
+            </span>
+          )}
+          {variant === "recent" && meeting.status === "scheduled" && (
+            <span className="shrink-0 rounded bg-zoom-bg px-2 py-0.5 text-xs font-bold text-zoom-muted">
+              Not started
+            </span>
+          )}
+        </p>
         <p>{formatDate(when)}</p>
         <p>
           {variant === "upcoming"
@@ -56,7 +68,7 @@ export default function MeetingCard({ meeting, variant }: MeetingCardProps) {
             href={`/meeting/${meeting.meeting_code}?host=1`}
             className="rounded-lg bg-zoom-blue px-4 py-2 text-sm font-bold text-white hover:bg-zoom-blue-dark"
           >
-            Start
+            {meeting.status === "active" ? "Join" : "Start"}
           </Link>
         </div>
       )}

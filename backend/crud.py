@@ -1,8 +1,8 @@
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
+# from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
@@ -22,6 +22,8 @@ class MeetingEndedError(Exception):
 class ParticipantNotFoundError(Exception):
     pass
 
+class NotAllowedError(Exception):
+    pass
 
 # ---------- Helpers ----------
 
@@ -63,29 +65,48 @@ def get_meeting_by_code(db: Session, code: str):
 
 # ---------- Dashboard lists ----------
 
+def scheduled_end(meeting: models.Meeting) -> datetime:
+    """When a scheduled meeting's time slot finishes (start + duration)."""
+    return meeting.scheduled_start + timedelta(minutes=meeting.duration_minutes or 0)
+
+
 def get_upcoming_meetings(db: Session):
-    return (
+    """Scheduled meetings that are in progress, or whose time slot hasn't finished."""
+    now = utcnow_naive()
+    candidates = (
         db.query(models.Meeting)
         .filter(
             models.Meeting.type == "scheduled",
-            models.Meeting.status == "scheduled",
-            models.Meeting.scheduled_start >= utcnow_naive(),
+            models.Meeting.status != "ended",
+            models.Meeting.scheduled_start.isnot(None),
         )
         .order_by(models.Meeting.scheduled_start.asc())
         .all()
     )
+    # The end time is start + duration, which is simplest to compute in Python.
+    return [m for m in candidates if m.status == "active" or scheduled_end(m) >= now]
 
 
 def get_recent_meetings(db: Session, limit: int = 10):
-    # Instant meetings have no scheduled_start, so fall back to created_at.
-    when = func.coalesce(models.Meeting.scheduled_start, models.Meeting.created_at)
-    return (
+    """Ended meetings, plus scheduled ones nobody started before their slot ran out."""
+    now = utcnow_naive()
+    ended = db.query(models.Meeting).filter(models.Meeting.status == "ended").all()
+
+    never_started = (
         db.query(models.Meeting)
-        .filter(models.Meeting.status == "ended")
-        .order_by(when.desc())
-        .limit(limit)
+        .filter(
+            models.Meeting.type == "scheduled",
+            models.Meeting.status == "scheduled",
+            models.Meeting.scheduled_start.isnot(None),
+        )
         .all()
     )
+    missed = [m for m in never_started if scheduled_end(m) < now]
+
+    combined = ended + missed
+    # Instant meetings have no scheduled_start, so fall back to created_at.
+    combined.sort(key=lambda m: m.scheduled_start or m.created_at, reverse=True)
+    return combined[:limit]
 
 
 # ---------- Creating meetings ----------
@@ -198,6 +219,32 @@ def leave_meeting(db: Session, code: str, participant_id: int, end_for_all: bool
 
     db.commit()
 
+def remove_participant(db: Session, code: str, target_id: int, requester_id: int):
+    meeting = get_meeting_by_code(db, code)
+    if meeting is None:
+        raise MeetingNotFoundError()
+
+    # The person asking must be someone currently in THIS meeting...
+    requester = db.get(models.Participant, requester_id)
+    if (
+        requester is None
+        or requester.meeting_id != meeting.id
+        or requester.left_at is not None
+    ):
+        raise ParticipantNotFoundError()
+    # ...and must be a host. This check is the authorization.
+    if requester.role != "host":
+        raise NotAllowedError("Only the host can remove participants")
+
+    target = db.get(models.Participant, target_id)
+    if target is None or target.meeting_id != meeting.id:
+        raise ParticipantNotFoundError()
+    if target.role == "host":
+        raise NotAllowedError("A host can't be removed")
+
+    if target.left_at is None:  # already gone? then there's nothing to do
+        target.left_at = utcnow_naive()
+    db.commit()
 
 def get_active_participants(db: Session, code: str):
     meeting = get_meeting_by_code(db, code)

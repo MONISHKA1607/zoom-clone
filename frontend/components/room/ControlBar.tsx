@@ -25,14 +25,16 @@ interface BarButtonProps {
   badge?: number;
   active?: boolean;
   placeholder?: boolean; // visual only, not part of the assignment
+  pressed?: boolean;
 }
 
-function BarButton({ label, icon, onClick, caret, badge, active, placeholder }: BarButtonProps) {
+function BarButton({ label, icon, onClick, caret, badge, active, placeholder, pressed }: BarButtonProps) {
   return (
     <button
       type="button"
       onClick={placeholder ? undefined : onClick}
       aria-disabled={placeholder || undefined}
+      aria-pressed={pressed}
       title={placeholder ? "Not part of this demo" : undefined}
       className={`flex min-w-[60px] flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs text-white ${
         placeholder ? "cursor-default" : "hover:bg-white/10"
@@ -78,6 +80,7 @@ interface ControlBarProps {
   onCloseEndMenu: () => void;
   onLeave: () => void;
   onEndForAll: () => void;
+  
 }
 
 export default function ControlBar({
@@ -117,12 +120,14 @@ export default function ControlBar({
           label="Audio"
           caret
           onClick={onToggleMic}
+          pressed={micOn}
           icon={micOn ? <Mic size={22} /> : <MicOff size={22} className="text-red-500" />}
         />
         <BarButton
           label="Video"
           caret
           onClick={onToggleCamera}
+          pressed={cameraOn}
           icon={
             cameraOn ? <Video size={22} /> : <VideoOff size={22} className="text-red-500" />
           }
@@ -136,6 +141,7 @@ export default function ControlBar({
           badge={participantCount}
           active={panelOpen}
           onClick={onTogglePanel}
+          pressed={panelOpen}
           icon={<Users size={22} />}
         />
         {/* Visual-only buttons: hidden on small screens to save space */}
