@@ -6,7 +6,7 @@ A full-stack video-meeting web app modelled on Zoom's web interface. Start an in
 
 > The backend runs on a free hosting tier that goes to sleep when idle. The first request after a quiet period can take up to a minute while it wakes up.
 
-## Demo in two minutes
+## Demo in two minutes:
 
 1. Open the app and click **New meeting**, then **Use microphone and camera** (or continue without).
 2. Click the **ⓘ** icon in the room header and **Copy link**.
