@@ -4,8 +4,41 @@ from database import Base, SessionLocal, engine
 from models import Meeting, Participant, User
 
 
+def top_of_next_hour(moment: datetime) -> datetime:
+    """14:23 -> 15:00, so seeded meetings start on tidy times."""
+    return moment.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+
+
+def add_attendees(db, meeting: Meeting, host: User, guest_names: list[str]):
+    """Give an ended meeting a host plus a few guests, so the history looks real."""
+    start = meeting.scheduled_start
+    end = start + timedelta(minutes=meeting.duration_minutes)
+
+    db.add(
+        Participant(
+            meeting_id=meeting.id,
+            user_id=host.id,
+            display_name=host.name,
+            role="host",
+            joined_at=start,
+            left_at=end,
+        )
+    )
+    for minutes_late, name in enumerate(guest_names, start=1):
+        db.add(
+            Participant(
+                meeting_id=meeting.id,
+                user_id=None,  # guests have no account
+                display_name=name,
+                role="participant",
+                joined_at=start + timedelta(minutes=minutes_late),
+                left_at=end - timedelta(minutes=minutes_late),
+            )
+        )
+
+
 def seed_database():
-    """Insert sample data, but only if the database is empty (idempotent)."""
+    """Insert a small demo data set, but only if the database is empty (idempotent)."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
@@ -14,118 +47,64 @@ def seed_database():
         if db.query(User).first():
             return
 
-        now = datetime.now(timezone.utc)
+        base = top_of_next_hour(datetime.now(timezone.utc))
 
         # The default "logged-in" user (the assignment says no auth needed).
-        user = User(
-            name="Monishka Mittal",
-            email="monishka@example.com",
-            avatar=None,
-        )
-        db.add(user)
-        db.flush()  # sends the INSERT now so user.id is populated, without committing
+        host = User(name="Monishka Mittal", email="monishka@example.com", avatar=None)
+        db.add(host)
+        db.flush()  # sends the INSERT now so host.id is populated, without committing
 
-        meetings = [
-            # --- Upcoming (scheduled in the future) ---
+        upcoming = [
             Meeting(
                 meeting_code="123-456-7890",
-                title="Weekly Team Sync",
-                description="Status updates and blockers",
-                host_id=user.id,
+                title="Team Standup",
+                description="Daily sync on progress and blockers",
+                host_id=host.id,
                 type="scheduled",
-                scheduled_start=now + timedelta(days=1, hours=2),
-                duration_minutes=60,
+                scheduled_start=base + timedelta(days=1),
+                duration_minutes=30,
                 status="scheduled",
             ),
             Meeting(
                 meeting_code="234-567-8901",
-                title="Project Kickoff",
-                description="Kickoff for the new client project",
-                host_id=user.id,
+                title="Project Planning",
+                description="Plan the next sprint and assign tasks",
+                host_id=host.id,
                 type="scheduled",
-                scheduled_start=now + timedelta(days=2, hours=5),
-                duration_minutes=45,
-                status="scheduled",
-            ),
-            Meeting(
-                meeting_code="345-678-9012",
-                title="Interview Prep Session",
-                description="Mock interview practice",
-                host_id=user.id,
-                type="scheduled",
-                scheduled_start=now + timedelta(days=4),
-                duration_minutes=30,
-                status="scheduled",
-            ),
-            # --- Recent (already ended) ---
-            Meeting(
-                meeting_code="456-789-0123",
-                title="Design Review",
-                description="Reviewing the dashboard mockups",
-                host_id=user.id,
-                type="scheduled",
-                scheduled_start=now - timedelta(days=1),
+                scheduled_start=base + timedelta(days=3),
                 duration_minutes=60,
-                status="ended",
-                created_at=now - timedelta(days=3),
-            ),
-            Meeting(
-                meeting_code="567-890-1234",
-                title="Personal Meeting Room",
-                description=None,
-                host_id=user.id,
-                type="instant",
-                scheduled_start=None,
-                duration_minutes=None,
-                status="ended",
-                created_at=now - timedelta(days=2),
-            ),
-            Meeting(
-                meeting_code="678-901-2345",
-                title="Standup",
-                description="Daily standup",
-                host_id=user.id,
-                type="scheduled",
-                scheduled_start=now - timedelta(days=3),
-                duration_minutes=15,
-                status="ended",
-                created_at=now - timedelta(days=5),
+                status="scheduled",
             ),
         ]
-        db.add_all(meetings)
-        db.flush()
 
-        # Participants for the ended meetings: the host plus a couple of guests.
-        for meeting in meetings:
-            if meeting.status != "ended":
-                continue
-            start = meeting.scheduled_start or meeting.created_at
-            db.add_all([
-                Participant(
-                    meeting_id=meeting.id,
-                    user_id=user.id,
-                    display_name=user.name,
-                    role="host",
-                    joined_at=start,
-                    left_at=start + timedelta(minutes=30),
-                ),
-                Participant(
-                    meeting_id=meeting.id,
-                    user_id=None,  # guest
-                    display_name="Aarav Sharma",
-                    role="participant",
-                    joined_at=start + timedelta(minutes=2),
-                    left_at=start + timedelta(minutes=28),
-                ),
-                Participant(
-                    meeting_id=meeting.id,
-                    user_id=None,  # guest
-                    display_name="Priya Singh",
-                    role="participant",
-                    joined_at=start + timedelta(minutes=5),
-                    left_at=start + timedelta(minutes=30),
-                ),
-            ])
+        past_discussion = Meeting(
+            meeting_code="345-678-9012",
+            title="Project Discussion",
+            description="Walkthrough of the project requirements",
+            host_id=host.id,
+            type="scheduled",
+            scheduled_start=base - timedelta(days=1),
+            duration_minutes=45,
+            status="ended",
+            created_at=base - timedelta(days=2),
+        )
+        past_review = Meeting(
+            meeting_code="456-789-0123",
+            title="Design Review",
+            description="Review of the dashboard designs",
+            host_id=host.id,
+            type="scheduled",
+            scheduled_start=base - timedelta(days=3),
+            duration_minutes=60,
+            status="ended",
+            created_at=base - timedelta(days=4),
+        )
+
+        db.add_all(upcoming + [past_discussion, past_review])
+        db.flush()  # assigns meeting ids, needed for the participant rows
+
+        add_attendees(db, past_discussion, host, ["Aarav Sharma", "Priya Singh"])
+        add_attendees(db, past_review, host, ["Aarav Sharma"])
 
         db.commit()
         print("Database seeded.")
