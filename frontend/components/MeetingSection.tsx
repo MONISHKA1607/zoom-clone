@@ -1,6 +1,6 @@
 import MeetingCard from "./MeetingCard";
 import type { Meeting } from "@/lib/types";
-
+// MeetingSection selects the correct UI state and renders meeting cards when data exists.
 interface MeetingSectionProps {
   title: string;
   meetings: Meeting[];

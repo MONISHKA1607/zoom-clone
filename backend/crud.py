@@ -74,7 +74,7 @@ def get_upcoming_meetings(db: Session):
     """Scheduled meetings that are in progress, or whose time slot hasn't finished."""
     now = utcnow_naive()
     candidates = (
-        db.query(models.Meeting)
+        db.query(models.Meeting) # query the meeting model through sqlalchemy
         .filter(
             models.Meeting.type == "scheduled",
             models.Meeting.status != "ended",
@@ -111,7 +111,7 @@ def get_recent_meetings(db: Session, limit: int = 10):
 
 # ---------- Creating meetings ----------
 
-def create_instant_meeting(db: Session, title: str):
+def create_instant_meeting(db: Session, title: str): # creates an instant meeting
     host = get_default_user(db)
 
     meeting = models.Meeting(
@@ -124,14 +124,14 @@ def create_instant_meeting(db: Session, title: str):
     db.add(meeting)
     db.flush()  # get meeting.id for the participant row
 
-    participant = models.Participant(
+    participant = models.Participant( # creates the host participant's record
         meeting_id=meeting.id,
         user_id=host.id,
         display_name=host.name,
         role="host",
     )
     db.add(participant)
-    db.commit()
+    db.commit() # commits both records in 1 transaction
     db.refresh(meeting)
     db.refresh(participant)
     return meeting, participant
@@ -152,13 +152,13 @@ def create_scheduled_meeting(db: Session, data: schemas.ScheduleMeetingRequest):
         title=data.title,
         description=data.description,
         host_id=host.id,
-        type="scheduled",
+        type="scheduled", # set meeting type  
         scheduled_start=start,
         duration_minutes=data.duration_minutes,
         status="scheduled",
     )
-    db.add(meeting)
-    db.commit()
+    db.add(meeting) # add the obj to transaction 
+    db.commit() # commit the transaction  
     db.refresh(meeting)
     return meeting
 
@@ -173,7 +173,7 @@ def join_meeting(db: Session, code: str, display_name: str, user_id):
         raise MeetingEndedError()
 
     is_host = user_id is not None and user_id == meeting.host_id
-    participant = models.Participant(
+    participant = models.Participant( # if meeting exists, and hasn't ended; it creates participant record
         meeting_id=meeting.id,
         user_id=meeting.host_id if is_host else None,
         display_name=display_name.strip(),
@@ -192,7 +192,7 @@ def leave_meeting(db: Session, code: str, participant_id: int, end_for_all: bool
     if meeting is None:
         raise MeetingNotFoundError()
 
-    participant = db.get(models.Participant, participant_id)
+    participant = db.get(models.Participant, participant_id) # validates that the participant belongs to that meeting and hasn't already left
     if participant is None or participant.meeting_id != meeting.id:
         raise ParticipantNotFoundError()
 
@@ -200,22 +200,22 @@ def leave_meeting(db: Session, code: str, participant_id: int, end_for_all: bool
         return  # already left, so nothing to do (also stops a stale host promoting twice)
 
     now = utcnow_naive()
-    participant.left_at = now
+    participant.left_at = now # records departure  
 
-    if participant.role == "host":
+    if participant.role == "host": # if the host leaves 
         # Everyone still in the meeting, in the order they joined.
         remaining = sorted(
             (p for p in meeting.participants if p.left_at is None),
             key=lambda p: p.joined_at,
         )
-        if end_for_all or not remaining:
+        if end_for_all or not remaining: # if host clicked end for all 
             # Close the meeting for everyone (or the last person just left).
-            meeting.status = "ended"
+            meeting.status = "ended" # update meeting status  
             for p in remaining:
-                p.left_at = now
+                p.left_at = now 
         else:
             # Host leaves but others stay: hand the host role to whoever joined first.
-            remaining[0].role = "host"
+            remaining[0].role = "host" 
 
     db.commit()
 
@@ -243,7 +243,7 @@ def remove_participant(db: Session, code: str, target_id: int, requester_id: int
         raise NotAllowedError("A host can't be removed")
 
     if target.left_at is None:  # already gone? then there's nothing to do
-        target.left_at = utcnow_naive()
+        target.left_at = utcnow_naive() # set it  
     db.commit()
 
 def get_active_participants(db: Session, code: str):
@@ -252,7 +252,7 @@ def get_active_participants(db: Session, code: str):
         raise MeetingNotFoundError()
     return (
         db.query(models.Participant)
-        .filter(
+        .filter( # filter on the meeting id and left_at is None, meaning they are still in the meeting 
             models.Participant.meeting_id == meeting.id,
             models.Participant.left_at.is_(None),
         )

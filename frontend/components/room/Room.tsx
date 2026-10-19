@@ -73,14 +73,14 @@ export default function Room({
 
     async function refresh() {
       try {
-        const [latestMeeting, latestParticipants] = await Promise.all([
-          getMeeting(code),
+        const [latestMeeting, latestParticipants] = await Promise.all([ // fetch meeting details and active participants list
+          getMeeting(code), // each refresh sends 2 get req 
           getParticipants(code),
         ]);
         // If I'm the one leaving, my own leave would look like "ended" or "removed".
         if (stopped || leavingRef.current) return;
 
-        if (latestMeeting.status === "ended") {
+        if (latestMeeting.status === "ended") { // frontend checks if the meeting has ended, and if so, it calls onEnded to handle the end of the meeting
           onEnded();
           return;
         }
@@ -90,14 +90,14 @@ export default function Room({
           onRemoved();
           return;
         }
-        setParticipants(latestParticipants);
+        setParticipants(latestParticipants); // if the meeting is still ongoing and I'm still in it, update the participants list with the latest data from the server
       } catch {
         // A network blip: keep showing the last known list and try again next tick.
       }
     }
 
-    refresh();
-    const id = setInterval(refresh, POLL_INTERVAL_MS);
+    refresh(); // once the room mounts, it starts polling effect immediately 
+    const id = setInterval(refresh, POLL_INTERVAL_MS); // every 3 secs
     return () => {
       stopped = true; // ignore any request that finishes after we've left
       clearInterval(id);
@@ -105,12 +105,12 @@ export default function Room({
   }, [code, participant.id, onEnded, onRemoved]);
 
   async function leave(endForAll: boolean) {
-    leavingRef.current = true;
+    leavingRef.current = true; // sets a reference to indicate that the user is leaving the meeting, preventing further polling updates
     setLeaving(true);
     setActionError(null);
     try {
-      await leaveMeeting(code, participant.id, endForAll);
-      clearParticipant(code);
+      await leaveMeeting(code, participant.id, endForAll); // calls this  
+      clearParticipant(code); // clears the participant from session storage
       router.push("/");
     } catch (e) {
       leavingRef.current = false;
@@ -124,7 +124,7 @@ export default function Room({
     try {
       await removeParticipant(code, targetId, participant.id);
       // Update the list right away instead of waiting for the next poll.
-      setParticipants((list) => list.filter((p) => p.id !== targetId));
+      setParticipants((list) => list.filter((p) => p.id !== targetId)); // creates new array with the removed participant filtered out, and updates the participants state with this new array 
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Couldn't remove that participant");
     }

@@ -73,9 +73,9 @@ def health_check():
 # NOTE: /meetings/upcoming and /meetings/recent MUST be declared before
 # /meetings/{code}, otherwise "upcoming" would be treated as a meeting code.
 
-@app.get("/meetings/upcoming", response_model=List[schemas.MeetingOut])
-def list_upcoming(db: Session = Depends(get_db)):
-    return [to_meeting_out(m) for m in crud.get_upcoming_meetings(db)]
+@app.get("/meetings/upcoming", response_model=List[schemas.MeetingOut]) # matching each GET request to a route 
+def list_upcoming(db: Session = Depends(get_db)): # each route receives a sqlalchemy session
+    return [to_meeting_out(m) for m in crud.get_upcoming_meetings(db)] # calls crud func
 
 
 @app.get("/meetings/recent", response_model=List[schemas.MeetingOut])
@@ -88,9 +88,9 @@ def create_instant(
     payload: schemas.InstantMeetingRequest = schemas.InstantMeetingRequest(),
     db: Session = Depends(get_db),
 ):
-    meeting, participant = crud.create_instant_meeting(db, payload.title)
+    meeting, participant = crud.create_instant_meeting(db, payload.title) # delegates the operation to to crud func
     return schemas.JoinResponse(meeting=to_meeting_out(meeting), participant=participant)
-
+# backend returns the meeting and participant in JoinResponse with 201.
 
 @app.post("/meetings/schedule", response_model=schemas.MeetingOut, status_code=201)
 def schedule_meeting(payload: schemas.ScheduleMeetingRequest, db: Session = Depends(get_db)):
@@ -107,8 +107,8 @@ def get_meeting(code: str, db: Session = Depends(get_db)):
 
 @app.post("/meetings/{code}/join", response_model=schemas.JoinResponse)
 def join_meeting(code: str, payload: schemas.JoinRequest, db: Session = Depends(get_db)):
-    meeting, participant = crud.join_meeting(db, code, payload.display_name, payload.user_id)
-    return schemas.JoinResponse(meeting=to_meeting_out(meeting), participant=participant)
+    meeting, participant = crud.join_meeting(db, code, payload.display_name, payload.user_id) # # sends the display name and optional user ID
+    return schemas.JoinResponse(meeting=to_meeting_out(meeting), participant=participant) 
 
 
 @app.post("/meetings/{code}/leave")

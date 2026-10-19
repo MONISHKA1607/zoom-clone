@@ -23,7 +23,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export function getUpcomingMeetings() {
-  return request<Meeting[]>("/meetings/upcoming");
+  return request<Meeting[]>("/meetings/upcoming"); // request<T> helper that constructs backend URL
+  // , calls fetch, checks for HTTP errors and parses JSON. The type helps TS understand the expected response shape
 }
 
 export function getRecentMeetings() {
@@ -33,11 +34,11 @@ export function getRecentMeetings() {
 export function createInstantMeeting() {
   return request<JoinResponse>("/meetings/instant", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({}), // empty json object  
   });
 }
 
-export function getMeeting(code: string) {
+export function getMeeting(code: string) { // retrieves the meeting's latest status  
   return request<Meeting>(`/meetings/${code}`);
 }
 
@@ -59,14 +60,14 @@ export function joinMeeting(
   });
 }
 
-export function scheduleMeeting(input: ScheduleInput) {
+export function scheduleMeeting(input: ScheduleInput) { 
   return request<Meeting>("/meetings/schedule", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function getParticipants(code: string) {
+export function getParticipants(code: string) { // retrieves the people currently in the room 
   return request<Participant[]>(`/meetings/${code}/participants`);
 }
 

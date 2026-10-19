@@ -53,7 +53,7 @@ export default function PreJoin({ meeting, asHost, onJoined }: PreJoinProps) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await joinMeeting(
+      const result = await joinMeeting( // when guest submits the form, this func calls POST/meetings/{code}/join
         meeting.meeting_code,
         trimmed,
         asHost ? meeting.host_id : null

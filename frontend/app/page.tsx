@@ -16,7 +16,7 @@ import MeetingSection from "@/components/MeetingSection";
 import QuickLinks from "@/components/QuickLinks";
 import type { Meeting } from "@/lib/types";
 
-export default function Home() {
+export default function Home() { // initializes state for upcoming and recent meetings, loading state, error state, and modal visibility
   const [upcoming, setUpcoming] = useState<Meeting[]>([]);
   const [recent, setRecent] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,14 +29,14 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  async function handleNewMeeting() {
+  async function handleNewMeeting() { // for new meeting creation 
     if (creating) return; // ignore double clicks
     setCreating(true);
     setActionError(null);
     try {
-      const { meeting, participant } = await createInstantMeeting();
-      saveParticipant(meeting.meeting_code, participant);
-      router.push(`/meeting/${meeting.meeting_code}`);
+      const { meeting, participant } = await createInstantMeeting(); // calls this func to POST/meetings/instant
+      saveParticipant(meeting.meeting_code, participant); // saving the participant using this func, in session.ts
+      router.push(`/meeting/${meeting.meeting_code}`); // navigates to this route; to the particular meeting room  
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Couldn't start the meeting");
       setCreating(false);
@@ -44,10 +44,10 @@ export default function Home() {
     // On success we deliberately leave `creating` true: the page is navigating away.
   }
 
-  const loadMeetings = useCallback(async () => {
+  const loadMeetings = useCallback(async () => { // for dashboard data fetching 
     try {
       const [upcomingData, recentData] = await Promise.all([
-        getUpcomingMeetings(),
+        getUpcomingMeetings(), // these 2 funcs defined in lib/api.ts
         getRecentMeetings(),
       ]);
       setUpcoming(upcomingData);
@@ -55,12 +55,12 @@ export default function Home() {
       setError(null);
     } catch {
       setError("Couldn't load meetings. Is the server running?");
-    } finally {
+    } finally { // ensures the loading state is cleared even if an error occurs
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { // uses useEffect to call loadMeetings when the component mounts, ensuring that the meeting data is fetched and displayed when the page loads
     loadMeetings();
   }, [loadMeetings]);
 

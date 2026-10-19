@@ -72,7 +72,7 @@ export default function ScheduleModal({ onClose, onScheduled }: ScheduleModalPro
     setSubmitting(true);
     setError(null);
     try {
-      const meeting = await scheduleMeeting({
+      const meeting = await scheduleMeeting({ // calls POST/meetings/schedule with the following payload in lib/api.ts
         title: title.trim(),
         description: description.trim() || null,
         scheduled_at: start.toISOString(), // converted to UTC here

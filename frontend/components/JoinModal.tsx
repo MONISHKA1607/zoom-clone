@@ -7,7 +7,7 @@ import { getMeeting } from "@/lib/api";
 import { extractMeetingCode } from "@/lib/meetingCode";
 import Modal from "./Modal";
 
-export default function JoinModal({ onClose }: { onClose: () => void }) {
+export default function JoinModal({ onClose }: { onClose: () => void }) { // extrcacts the meeting code 
   const router = useRouter();
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export default function JoinModal({ onClose }: { onClose: () => void }) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault(); // stop the browser's default full-page form submit
 
-    const code = extractMeetingCode(value);
+    const code = extractMeetingCode(value); // extracts meeting code
     if (!code) {
       setError("Enter a valid 10-digit meeting ID or invite link.");
       return;
@@ -31,7 +31,7 @@ export default function JoinModal({ onClose }: { onClose: () => void }) {
         setLoading(false);
         return;
       }
-      router.push(`/meeting/${meeting.meeting_code}`);
+      router.push(`/meeting/${meeting.meeting_code}`); // calls GET/meetings/{code}
       // Leave `loading` true: we're navigating away.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't find that meeting.");

@@ -20,7 +20,7 @@ class InstantMeetingRequest(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=100)
 
 
-class ScheduleMeetingRequest(BaseModel):
+class ScheduleMeetingRequest(BaseModel): # verifying everything
     title: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
     scheduled_at: datetime
